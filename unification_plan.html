@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unification Program - Plan Evolution</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f7fa;
+            padding: 20px;
+            overflow-x: auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .version-indicator {
+            font-size: 18px;
+            color: #7f8c8d;
+            font-weight: 600;
+        }
+
+        .timeline-container {
+            position: relative;
+            background: white;
+            border-radius: 12px;
+            padding: 40px 20px 20px 250px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            cursor: pointer;
+            min-height: 600px;
+            min-width: 1200px;
+        }
+
+        .timeline-axis {
+            position: absolute;
+            top: 20px;
+            left: 250px;
+            right: 20px;
+            height: 2px;
+            background: #ddd;
+        }
+
+        .workstream {
+            position: relative;
+            height: 120px;
+            margin-bottom: 20px;
+            border-left: 4px solid;
+            padding-left: 15px;
+        }
+
+        .workstream-label {
+            position: absolute;
+            left: -230px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-weight: 700;
+            font-size: 16px;
+            width: 200px;
+            text-align: right;
+        }
+
+        .collaboration { border-color: #667eea; }
+        .collaboration .workstream-label { color: #667eea; }
+
+        .identity { border-color: #f093fb; }
+        .identity .workstream-label { color: #f093fb; }
+
+        .cds { border-color: #4facfe; }
+        .cds .workstream-label { color: #4facfe; }
+
+        .data-cloud { border-color: #43e97b; }
+        .data-cloud .workstream-label { color: #43e97b; }
+
+        .deliverable {
+            position: absolute;
+            height: 70px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 13px;
+            color: white;
+            text-align: center;
+            padding: 8px 12px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            transition: all 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            top: 25px;
+        }
+
+        .deliverable.highlight {
+            animation: pulse 2s infinite;
+        }
+
+        .deliverable.fade-out {
+            opacity: 0.2;
+            transform: scale(0.9);
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+            50% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.8), 0 2px 6px rgba(0,0,0,0.15); }
+        }
+
+        /* Collaboration workstream */
+        .case-mgmt-v1 {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 180px;
+            left: 20px;
+        }
+
+        .case-mgmt-v2 {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 180px;
+            left: 220px;
+        }
+
+        /* Identity workstream */
+        .identity-m1 {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            width: 180px;
+            left: 220px;
+        }
+
+        /* CDS workstream */
+        .design-library {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            width: 160px;
+            left: 20px;
+        }
+
+        .nav-bar {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            width: 160px;
+            left: 200px;
+        }
+
+        .data-grid {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            width: 180px;
+            left: 380px;
+        }
+
+        /* Data Cloud workstream */
+        .data-cloud-deliverable {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            width: 540px;
+            left: 20px;
+        }
+
+        .arrow {
+            position: absolute;
+            height: 2px;
+            background: #95a5a6;
+            top: 60px;
+            transition: all 1.2s ease;
+        }
+
+        .arrow::after {
+            content: '';
+            position: absolute;
+            right: -6px;
+            top: -3px;
+            width: 0;
+            height: 0;
+            border-left: 8px solid #95a5a6;
+            border-top: 4px solid transparent;
+            border-bottom: 4px solid transparent;
+        }
+
+        .arrow-collab {
+            left: 202px;
+            width: 16px;
+        }
+
+        .arrow-cds-1 {
+            left: 182px;
+            width: 16px;
+        }
+
+        .arrow-cds-2 {
+            left: 362px;
+            width: 16px;
+        }
+
+        /* Plan v2 state */
+        .v2 .case-mgmt-v2 {
+            opacity: 0;
+            transform: scale(0.8);
+        }
+
+        .v2 .arrow-collab {
+            opacity: 0;
+        }
+
+        .v2 .nav-bar {
+            /* Move Nav Bar up to Collaboration workstream, positioned after Case Management V1 */
+            left: 220px;
+            top: -235px; /* Move up to align with Collaboration workstream */
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .v2 .identity-m1 {
+            left: 420px;
+        }
+
+        .v2 .data-grid {
+            left: 200px;
+        }
+
+        .v2 .arrow-cds-2 {
+            left: 182px;
+            width: 16px;
+        }
+
+        .removed-label {
+            position: absolute;
+            top: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #dc3545;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            opacity: 0;
+            transition: opacity 0.5s ease 1.2s;
+            white-space: nowrap;
+            z-index: 10;
+        }
+
+        .v2 .removed-label {
+            opacity: 1;
+        }
+
+        .info-panel {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 30px;
+            font-size: 14px;
+            z-index: 1000;
+            transition: opacity 0.3s;
+            max-width: 90%;
+            text-align: center;
+        }
+
+        .changes-list {
+            margin-top: 40px;
+            padding: 20px;
+            background: #fff3cd;
+            border-radius: 8px;
+            border-left: 4px solid #ffc107;
+            opacity: 0;
+            transition: opacity 0.5s ease 1.4s;
+        }
+
+        .v2 .changes-list {
+            opacity: 1;
+        }
+
+        .changes-list h3 {
+            color: #856404;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .changes-list ul {
+            list-style: none;
+            color: #856404;
+        }
+
+        .changes-list li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .changes-list li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: #ffc107;
+            font-weight: bold;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .legend-color {
+            width: 30px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        .legend-text {
+            font-size: 14px;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        .deliverable-content {
+            transition: opacity 0.3s ease 0.6s;
+        }
+
+        .v2 .nav-bar .deliverable-content {
+            opacity: 0;
+        }
+
+        .deliverable-content-v2 {
+            position: absolute;
+            opacity: 0;
+            transition: opacity 0.3s ease 0.9s;
+        }
+
+        .v2 .deliverable-content-v2 {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Unification Program</h1>
+        <div class="version-indicator" id="versionText">Plan v1</div>
+    </div>
+
+    <div class="timeline-container" id="container" onclick="togglePlan()">
+        <div class="timeline-axis"></div>
+        
+        <!-- Collaboration Workstream -->
+        <div class="workstream collaboration">
+            <div class="workstream-label">Collaboration</div>
+            <div class="deliverable case-mgmt-v1">
+                Case Management V1
+            </div>
+            <div class="arrow arrow-collab" id="arrowCollab"></div>
+            <div class="deliverable case-mgmt-v2" id="caseMgmtV2">
+                Case Management V2
+                <div class="removed-label">REMOVED</div>
+            </div>
+        </div>
+
+        <!-- Identity Workstream -->
+        <div class="workstream identity">
+            <div class="workstream-label">Identity</div>
+            <div class="deliverable identity-m1" id="identityM1">Identity M1</div>
+        </div>
+
+        <!-- CDS Workstream -->
+        <div class="workstream cds">
+            <div class="workstream-label">Chainalysis Design System<br/><small>(CDS)</small></div>
+            <div class="deliverable design-library">Design Library</div>
+            <div class="arrow arrow-cds-1"></div>
+            <div class="deliverable nav-bar" id="navBar">
+                <span class="deliverable-content">Nav Bar</span>
+                <span class="deliverable-content-v2">App Shell</span>
+            </div>
+            <div class="arrow arrow-cds-2" id="arrowCds2"></div>
+            <div class="deliverable data-grid" id="dataGrid">Data Grid / Table</div>
+        </div>
+
+        <!-- Data Cloud Workstream -->
+        <div class="workstream data-cloud">
+            <div class="workstream-label">Data Cloud</div>
+            <div class="deliverable data-cloud-deliverable">Data Cloud</div>
+        </div>
+
+        <div class="changes-list" id="changesList">
+            <h3>📋 Key Changes in Plan v2:</h3>
+            <ul>
+                <li><strong>Case Management V2:</strong> De-prioritized and removed from roadmap</li>
+                <li><strong>Nav Bar → App Shell:</strong> Moved from CDS team to Collaboration team (replaces Case Management V2)</li>
+                <li><strong>Data Grid accelerated:</strong> CDS can start Data Grid earlier (no longer blocked by Nav Bar)</li>
+                <li><strong>Identity M1 de-prioritized:</strong> Moved later in timeline</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="legend">
+        <div class="legend-item">
+            <div class="legend-color" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+            <div class="legend-text">Collaboration</div>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);"></div>
+            <div class="legend-text">Identity</div>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);"></div>
+            <div class="legend-text">CDS</div>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);"></div>
+            <div class="legend-text">Data Cloud</div>
+        </div>
+    </div>
+
+    <div class="info-panel" id="infoPanel">
+        Click anywhere to see Plan v2 evolution →
+    </div>
+
+    <script>
+        let isV2 = false;
+
+        function togglePlan() {
+            const container = document.getElementById('container');
+            const versionText = document.getElementById('versionText');
+            const infoPanel = document.getElementById('infoPanel');
+            const navBar = document.getElementById('navBar');
+            const identityM1 = document.getElementById('identityM1');
+            const dataGrid = document.getElementById('dataGrid');
+            const caseMgmtV2 = document.getElementById('caseMgmtV2');
+            
+            if (!isV2) {
+                // Transition to v2
+                container.classList.add('v2');
+                versionText.textContent = 'Plan v2';
+                infoPanel.textContent = 'Click again to return to Plan v1 ←';
+                
+                // Add highlight animations to changed items
+                setTimeout(() => {
+                    navBar.classList.add('highlight');
+                    identityM1.classList.add('highlight');
+                    dataGrid.classList.add('highlight');
+                    caseMgmtV2.classList.add('fade-out');
+                }, 1200);
+                
+                isV2 = true;
+            } else {
+                // Return to v1
+                container.classList.remove('v2');
+                versionText.textContent = 'Plan v1';
+                infoPanel.textContent = 'Click anywhere to see Plan v2 evolution →';
+                
+                // Remove highlights
+                navBar.classList.remove('highlight');
+                identityM1.classList.remove('highlight');
+                dataGrid.classList.remove('highlight');
+                caseMgmtV2.classList.remove('fade-out');
+                
+                isV2 = false;
+            }
+        }
+
+        // Keyboard support
+        document.addEventListener('keydown', function(e) {
+            if (e.code === 'Space' || e.code === 'Enter') {
+                e.preventDefault();
+                togglePlan();
+            }
+        });
+    </script>
+</body>
+</html>
